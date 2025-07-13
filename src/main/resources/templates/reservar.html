@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Canchas - Intranet</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --secondary-color: #81c784;
+            --light-color: #f1f8e9;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #1b5e20;
+            border-color: #1b5e20;
+        }
+        
+        .time-slot {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 8px 5px;
+            margin: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+            text-align: center;
+            min-width: 60px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .time-slot:hover {
+            background-color: var(--light-color);
+        }
+        
+        .time-slot.selected {
+            background-color: var(--secondary-color);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .time-slot.booked {
+            background-color: #ffcdd2;
+            color: #c62828;
+            cursor: not-allowed;
+        }
+        
+        .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .field-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .schedule-container {
+            overflow-x: auto;
+            padding-bottom: 15px;
+        }
+        
+        .time-row {
+            display: flex;
+            min-width: max-content;
+        }
+        
+        .time-cell {
+            flex: 0 0 60px;
+        }
+        
+        .field-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .field-name {
+            flex: 0 0 150px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px 0 0 5px;
+        }
+        
+        .field-slots {
+            display: flex;
+            overflow-x: auto;
+            padding: 5px;
+            background-color: white;
+            border-radius: 0 5px 5px 0;
+            border: 1px solid #dee2e6;
+        }
+        
+        .time-marker {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 1px;
+            background-color: rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        
+        .time-marker.hour {
+            background-color: rgba(0,0,0,0.3);
+        }
+        
+        .scroll-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de navegación -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Fútbol Intranet</a>
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3">Bienvenido, [NombreUsuario]</span>
+                <button class="btn btn-outline-light">Cerrar sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido principal -->
+    <div class="container py-4">
+        <div class="row">
+            <!-- Panel de usuario -->
+            <div class="col-md-3">
+                <div class="card">
+                    
+                    
+                </div>
+                
+                
+            </div>
+            
+            <!-- Panel de reservas -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Reservar cancha</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-2">Hoy</button>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary"><</button>
+                                <button class="btn btn-sm btn-outline-primary disabled">15 Junio 2023</button>
+                                <button class="btn btn-sm btn-outline-primary">></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <input type="date" class="form-control" id="reservationDate">
+                            </div>
+                        </div>
+                        
+                        <div class="schedule-container">
+                            <div class="scroll-container">
+                                <!-- Marcadores de hora completa -->
+                                <div style="position: relative; height: 0;">
+                                    <div class="time-marker hour" style="left: 0px;"></div> <!-- 8:00 -->
+                                    <div class="time-marker hour" style="left: 120px;"></div> <!-- 10:00 -->
+                                    <div class="time-marker hour" style="left: 240px;"></div> <!-- 12:00 -->
+                                    <div class="time-marker hour" style="left: 360px;"></div> <!-- 14:00 -->
+                                    <div class="time-marker hour" style="left: 480px;"></div> <!-- 16:00 -->
+                                    <div class="time-marker hour" style="left: 600px;"></div> <!-- 18:00 -->
+                                    <div class="time-marker hour" style="left: 720px;"></div> <!-- 20:00 -->
+                                    <div class="time-marker hour" style="left: 840px;"></div> <!-- 22:00 -->
+                                </div>
+                                
+                                <!-- Cancha 1 -->
+                                <div class="field-row mb-3">
+                                    <div class="field-name">Cancha #1 - F7</div>
+                                    <div class="field-slots">
+                                        <!-- Horas de 8:00 a 23:00 con intervalos de 30 minutos -->
+                                        <div class="time-slot">8:00</div>
+                                        <div class="time-slot">8:30</div>
+                                        <div class="time-slot">9:00</div>
+                                        <div class="time-slot">9:30</div>
+                                        <div class="time-slot">10:00</div>
+                                        <div class="time-slot">10:30</div>
+                                        <div class="time-slot">11:00</div>
+                                        <div class="time-slot">11:30</div>
+                                        <div class="time-slot selected">12:00</div>
+                                        <div class="time-slot">12:30</div>
+                                        <div class="time-slot">13:00</div>
+                                        <div class="time-slot">13:30</div>
+                                        <div class="time-slot">14:00</div>
+                                        <div class="time-slot">14:30</div>
+                                        <div class="time-slot booked">15:00</div>
+                                        <div class="time-slot booked">15:30</div>
+                                        <div class="time-slot booked">16:00</div>
+                                        <div class="time-slot booked">16:30</div>
+                                        <div class="time-slot">17:00</div>
+                                        <div class="time-slot">17:30</div>
+                                        <div class="time-slot">18:00</div>
+                                        <div class="time-slot">18:30</div>
+                                        <div class="time-slot">19:00</div>
+                                        <div class="time-slot">19:30</div>
+                                        <div class="time-slot">20:00</div>
+                                        <div class="time-slot">20:30</div>
+                                        <div class="time-slot">21:00</div>
+                                        <div class="time-slot">21:30</div>
+                                        <div class="time-slot">22:00</div>
+                                        <div class="time-slot">22:30</div>
+                                        <div class="time-slot">23:00</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Cancha 2 -->
+                                <div class="field-row mb-3">
+                                    <div class="field-name">Cancha #2 - F11</div>
+                                    <div class="field-slots">
+                                        <div class="time-slot booked">8:00</div>
+                                        <div class="time-slot booked">8:30</div>
+                                        <div class="time-slot booked">9:00</div>
+                                        <div class="time-slot booked">9:30</div>
+                                        <div class="time-slot">10:00</div>
+                                        <div class="time-slot">10:30</div>
+                                        <div class="time-slot">11:00</div>
+                                        <div class="time-slot">11:30</div>
+                                        <div class="time-slot">12:00</div>
+                                        <div class="time-slot">12:30</div>
+                                        <div class="time-slot">13:00</div>
+                                        <div class="time-slot">13:30</div>
+                                        <div class="time-slot">14:00</div>
+                                        <div class="time-slot">14:30</div>
+                                        <div class="time-slot">15:00</div>
+                                        <div class="time-slot">15:30</div>
+                                        <div class="time-slot">16:00</div>
+                                        <div class="time-slot">16:30</div>
+                                        <div class="time-slot">17:00</div>
+                                        <div class="time-slot">17:30</div>
+                                        <div class="time-slot">18:00</div>
+                                        <div class="time-slot">18:30</div>
+                                        <div class="time-slot">19:00</div>
+                                        <div class="time-slot">19:30</div>
+                                        <div class="time-slot">20:00</div>
+                                        <div class="time-slot">20:30</div>
+                                        <div class="time-slot">21:00</div>
+                                        <div class="time-slot">21:30</div>
+                                        <div class="time-slot">22:00</div>
+                                        <div class="time-slot">22:30</div>
+                                        <div class="time-slot">23:00</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Cancha 3 -->
+                                <div class="field-row mb-3">
+                                    <div class="field-name">Cancha #3 - F7</div>
+                                    <div class="field-slots">
+                                        <div class="time-slot">8:00</div>
+                                        <div class="time-slot">8:30</div>
+                                        <div class="time-slot">9:00</div>
+                                        <div class="time-slot">9:30</div>
+                                        <div class="time-slot booked">10:00</div>
+                                        <div class="time-slot booked">10:30</div>
+                                        <div class="time-slot booked">11:00</div>
+                                        <div class="time-slot booked">11:30</div>
+                                        <div class="time-slot">12:00</div>
+                                        <div class="time-slot">12:30</div>
+                                        <div class="time-slot">13:00</div>
+                                        <div class="time-slot">13:30</div>
+                                        <div class="time-slot">14:00</div>
+                                        <div class="time-slot">14:30</div>
+                                        <div class="time-slot">15:00</div>
+                                        <div class="time-slot">15:30</div>
+                                        <div class="time-slot">16:00</div>
+                                        <div class="time-slot">16:30</div>
+                                        <div class="time-slot">17:00</div>
+                                        <div class="time-slot">17:30</div>
+                                        <div class="time-slot">18:00</div>
+                                        <div class="time-slot">18:30</div>
+                                        <div class="time-slot">19:00</div>
+                                        <div class="time-slot">19:30</div>
+                                        <div class="time-slot">20:00</div>
+                                        <div class="time-slot">20:30</div>
+                                        <div class="time-slot">21:00</div>
+                                        <div class="time-slot">21:30</div>
+                                        <div class="time-slot">22:00</div>
+                                        <div class="time-slot">22:30</div>
+                                        <div class="time-slot">23:00</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Cancha 4 -->
+                                <div class="field-row mb-3">
+                                    <div class="field-name">Cancha #4 - F5</div>
+                                    <div class="field-slots">
+                                        <div class="time-slot">8:00</div>
+                                        <div class="time-slot">8:30</div>
+                                        <div class="time-slot">9:00</div>
+                                        <div class="time-slot">9:30</div>
+                                        <div class="time-slot">10:00</div>
+                                        <div class="time-slot">10:30</div>
+                                        <div class="time-slot">11:00</div>
+                                        <div class="time-slot">11:30</div>
+                                        <div class="time-slot">12:00</div>
+                                        <div class="time-slot">12:30</div>
+                                        <div class="time-slot">13:00</div>
+                                        <div class="time-slot">13:30</div>
+                                        <div class="time-slot">14:00</div>
+                                        <div class="time-slot">14:30</div>
+                                        <div class="time-slot">15:00</div>
+                                        <div class="time-slot">15:30</div>
+                                        <div class="time-slot">16:00</div>
+                                        <div class="time-slot">16:30</div>
+                                        <div class="time-slot">17:00</div>
+                                        <div class="time-slot">17:30</div>
+                                        <div class="time-slot">18:00</div>
+                                        <div class="time-slot">18:30</div>
+                                        <div class="time-slot">19:00</div>
+                                        <div class="time-slot">19:30</div>
+                                        <div class="time-slot">20:00</div>
+                                        <div class="time-slot">20:30</div>
+                                        <div class="time-slot">21:00</div>
+                                        <div class="time-slot">21:30</div>
+                                        <div class="time-slot">22:00</div>
+                                        <div class="time-slot">22:30</div>
+                                        <div class="time-slot">23:00</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de reserva -->
+    <div class="modal fade" id="reservationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar reserva</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong id="fieldName">Cancha #1 - F7</strong></p>
+                    <p id="reservationDateText">Fecha: 15 de junio de 2023</p>
+                    <p id="reservationTime">Hora: 12:00</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Duración:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="duration" id="duration30" value="30">
+                            <label class="form-check-label" for="duration30">
+                                30 minutos - S/ 90
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="duration" id="duration60" value="60" checked>
+                            <label class="form-check-label" for="duration60">
+                                60 minutos - S/ 180
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="duration" id="duration90" value="90">
+                            <label class="form-check-label" for="duration90">
+                                90 minutos - S/ 270
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="duration" id="duration120" value="120">
+                            <label class="form-check-label" for="duration120">
+                                120 minutos - S/ 360
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="paymentMethod" class="form-label">Método de pago:</label>
+                        <select class="form-select" id="paymentMethod">
+                            <option selected>Tarjeta de crédito</option>
+                            <option>Transferencia bancaria</option>
+                            <option>Yape/Plin</option>
+                            <option>Efectivo en cancha</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="continueButton">Continuar - S/ 180</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mostrar modal al seleccionar un horario
+        document.addEventListener('DOMContentLoaded', function() {
+            const timeSlots = document.querySelectorAll('.time-slot:not(.booked)');
+            const continueButton = document.getElementById('continueButton');
+            const pricePer30Min = 90;
+            
+            timeSlots.forEach(slot => {
+                slot.addEventListener('click', function() {
+                    // Quitar selección de otros slots
+                    timeSlots.forEach(s => s.classList.remove('selected'));
+                    // Seleccionar este slot
+                    this.classList.add('selected');
+                    
+                    // Obtener información de la cancha y hora
+                    const fieldRow = this.closest('.field-row');
+                    const fieldName = fieldRow.querySelector('.field-name').textContent;
+                    const time = this.textContent;
+                    
+                    // Actualizar modal con la información
+                    document.getElementById('fieldName').textContent = fieldName;
+                    document.getElementById('reservationTime').textContent = `Hora: ${time}`;
+                    
+                    // Mostrar modal
+                    const modal = new bootstrap.Modal(document.getElementById('reservationModal'));
+                    modal.show();
+                });
+            });
+            
+            // Actualizar precio cuando cambia la duración
+            document.querySelectorAll('input[name="duration"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const duration = parseInt(this.value);
+                    const price = pricePer30Min * (duration / 30);
+                    continueButton.textContent = `Continuar - S/ ${price}`;
+                });
+            });
+            
+            // Actualizar fecha al cambiar el input
+            const dateInput = document.getElementById('reservationDate');
+            const dateText = document.getElementById('reservationDateText');
+            
+            dateInput.addEventListener('change', function() {
+                const selectedDate = new Date(this.value);
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                dateText.textContent = `Fecha: ${selectedDate.toLocaleDateString('es-ES', options)}`;
+            });
+            
+            // Establecer fecha actual por defecto
+            const today = new Date();
+            dateInput.valueAsDate = today;
+            dateText.textContent = `Fecha: ${today.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        });
+    </script>
+</body>
+</html>
